@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Car Game</title>
+</head>
+<body>
+    <h3>Instruction</h3>
+    <p> Move the red car away from falling asteroids. Press arrows to move, press A to shuffle the asteroids (lose 1 point in progress)
+    . You lose if your point becomes negative</p>
+    <button onclick="start()">Start game</button>
+    <canvas id="myCanvas" width="1000px" height="400px" style="border:1px solid #d3d3d3;"></canvas>
+</body>
+</html>
+<script>
+    var canvas = document.getElementById("myCanvas");
+    var context = canvas.getContext("2d");
+    var score = 0;
+    var level = 1;
+    const CAR_WIDTH = 50;
+    const CAR_HEIGHT = 100;
+    const BLOCK_SIZE = 30;
+
+    let car = new Rectangle(canvas.width / 2 - CAR_WIDTH, canvas.height - CAR_HEIGHT, CAR_WIDTH,CAR_HEIGHT, 'red');
+    let obstacle = [];
+    let objList = [car];
+    for (let i = 1; i <= 15; i++){
+        let asteroid = new Rectangle(Math.floor(Math.random() * canvas.width), Math.floor(Math.random()*canvas.height/2),
+            BLOCK_SIZE, BLOCK_SIZE, getRandomColor());
+        obstacle.push(asteroid);
+        objList.push(asteroid);
+    }
+    display(objList);
+
+    function Rectangle(x,y,width, length, color){
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.length = length;
+        this.color = color;
+
+        this.setLength = function (length){
+            this.length = length;
+        }
+        this.setWidth = function (width){
+            this.width = width;
+        }
+        this.setX = function (x){
+            this.x = x;
+        }
+        this.setY = function (y){
+            this.y = y;
+        }
+        this.setColor = function (color){
+            this.color = color;
+        }
+        this.draw = function (){
+            context.rect(this.x, this.y, this.width, this.length );
+            context.fillStyle = color
+            context.fill();
+        }
+    }
+
+    // choose random color
+    function getRandomColor() {
+        let red = Math.floor(Math.random()*255);
+        let green = Math.floor(Math.random()*255);
+        let blue = Math.floor(Math.random()*255);
+        return "rgb(" + red + "," + blue + "," + green + ")";
+    }
+    //wrap the screen
+    function collideEdge(){
+        let x = car.x;
+        let y = car.y;
+        if (y < -CAR_HEIGHT) {
+            car.setY(canvas.height - CAR_HEIGHT);
+        } else if (y > canvas.height){
+            car.setY(0);
+        }
+        if (x < -CAR_WIDTH) {
+            car.setX(canvas.width-CAR_WIDTH);
+        } else if (x > canvas.width){
+            car.setX(0);
+        }
+    }
+
+    //pass a level
+    function passLevel() {
+        let min = canvas.height;
+        for (let index in obstacle) {
+            let y = obstacle[index].y;
+            if (y < min) {
+                min = y;
+            }
+        }
+        console.log(min);
+        if (min >= canvas.height) {
+            score++;
+            level++;
+            for (let i = 0; i < 1000; i++) {
+                setTimeout(function () {
+                    context.font = "30px Arial";
+                    context.fillText('You get '+ score+' points', canvas.width / 2, canvas.height / 2);
+                }, 40)
+            }
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            car.setX(canvas.width / 2 - CAR_WIDTH);
+            car.setY(canvas.height - CAR_HEIGHT);
+            for (let asteroid of obstacle) {
+                asteroid.setX(Math.floor(Math.random() * canvas.width));
+                asteroid.setY(Math.floor(Math.random() * canvas.height / 2));
+                asteroid.setColor(getRandomColor());
+            }
+
+        }
+    }
+
+    //the car collides with an asteroid
+    function collideRect(car, block){
+        let centerx1 = car.x+car.width/2;
+        let centery1 = car.y+car.length/2;
+        let centerx2 = block.x+block.width/2;
+        let centery2 = block.y+block.length/2;
+        if ( Math.abs(centerx1 - centerx2) <= (car.width+block.width)/2 &&
+            Math.abs(centery1 - centery2) <= (car.length+block.length)/2) {
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < 1000; i++) {
+                setTimeout(function () {
+                    context.font = "30px Arial";
+                    context.fillText("Btooom!", canvas.width / 2, canvas.height / 2);
+                }, 40)
+            }
+            score = 0;
+            reset();
+        }
+    }
+
+    //draw
+    function display(objList){
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        for (obj of objList){
+            context.beginPath();
+            obj.draw();
+            context.closePath();
+        }
+    }
+    function reset(){
+        score = 0;
+        car.setX(canvas.width / 2 - CAR_WIDTH);
+        car.setY(canvas.height - CAR_HEIGHT);
+        for (let asteroid of obstacle) {
+            asteroid.setX(Math.floor(Math.random() * canvas.width));
+            asteroid.setY(Math.floor(Math.random() * canvas.height / 2));
+            asteroid.setColor(getRandomColor());
+        }
+    }
+
+    function checkScore(){
+        if (score < 0){
+            for (let i = 0; i < 1000; i++) {
+                setTimeout(function () {
+                    context.font = "30px Arial";
+                    context.fillText('You lost all points', canvas.width / 2, canvas.height / 2);
+                }, 40)
+            reset();
+            }
+        }
+    }
+
+
+    //catch buttons
+    function moveCar(evt){
+        let posx = car.x;
+        let posy = car.y;
+        switch (evt.keyCode){
+            //move
+            case 37:
+                car.setX(posx-5);
+                break;
+            case 39:
+                car.setX(posx+5);
+                break;
+            case 38:
+                car.setY(posy-5);
+                break;
+            case 40:
+                car.setY(posy+5);
+                break;
+            // teleport, lose 1 point
+            case 65:
+                for (let asteroid of obstacle) {
+                    asteroid.setX(Math.floor(Math.random() * canvas.width));
+                    asteroid.setY(Math.floor(Math.random()*canvas.height/2));
+                    asteroid.setColor(getRandomColor());
+                }
+                score--;
+                break;
+        }
+    }
+
+    function render() {
+        for (let asteroid of obstacle){
+            asteroid.setY(asteroid.y+3);
+        }
+        car.setY(car.y - 1);
+        display(objList);
+        collideEdge();
+        for (let asteroid of obstacle){
+            collideRect(car, asteroid);
+        }
+        passLevel();
+        checkScore();
+    }
+
+    function start(){
+        setInterval(function (){
+            render();
+        }, 35);
+    }
+
+    window.addEventListener('keydown', moveCar);
+
+</script>
